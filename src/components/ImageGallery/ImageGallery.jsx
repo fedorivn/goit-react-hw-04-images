@@ -4,17 +4,17 @@ import { ImageGalleryItem } from 'components/ImageGalleryItem/ImageGalleryItem';
 
 import { Gallery } from './ImageGallery.styled';
 
-export const ImageGallery = ({ articles, onImageClick }) => {
+export const ImageGallery = ({ articles }) => {
   return (
     <Gallery>
-      {articles.map(({ id, tags, webformatURL }, index) => {
+      {articles.map(({ id, tags, webformatURL, largeImageURL }, index) => {
         return (
           <ImageGalleryItem
             key={id}
             index={index}
             tags={tags}
             ImgURL={webformatURL}
-            onImageClick={onImageClick}
+            largeImageURL={largeImageURL}
           />
         );
       })}
@@ -22,7 +22,6 @@ export const ImageGallery = ({ articles, onImageClick }) => {
   );
 };
 ImageGallery.propTypes = {
-  onImageClick: PropTypes.func.isRequired,
   articles: PropTypes.arrayOf(
     PropTypes.shape({
       id: PropTypes.number.isRequired,

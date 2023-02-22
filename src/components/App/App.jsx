@@ -1,131 +1,93 @@
-import { Component } from 'react';
+import { useEffect, useState } from 'react';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-import { Modal } from 'components/Modal/Modal';
 import { SearchBar } from 'components/Searchbar/Searchbar';
 import { ImageGallery } from 'components/ImageGallery/ImageGallery';
 import { Loader } from 'components/Loader/Loader';
 import { Button } from 'components/Button/Button';
 import { Notification } from 'components/Notification/Notification';
-
+import { Title } from './App.styled';
 import fetchImages from 'service/pixabay-api';
 
-export class App extends Component {
-  state = {
-    webformatURL: '',
-    largeImageURL: '',
-    alt: '',
-    page: 1,
-    query: '',
-    articles: [],
-    isLoading: false,
-    error: null,
-    showModal: false,
-    totalHits: 0,
-    tags: '',
-  };
+export const App = () => {
+  const [page, setPage] = useState(1);
+  const [query, setQuery] = useState('');
+  const [articles, setArticles] = useState([]);
+  const [totalHits, setTotalHits] = useState(0);
+  const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  async componentDidUpdate(_, prevState) {
-    const searchQuery = this.state.query;
-    const searchPage = this.state.page;
+  // const galleryRef = useRef(null);
 
-    if (searchQuery !== prevState.query || searchPage !== prevState.page) {
+  useEffect(() => {
+    if (query === '') {
+      return;
+    }
+
+    async function fetchGalleryImages() {
       try {
-        this.setState({ isLoading: true });
-        const imageData = await fetchImages(searchQuery, searchPage);
+        setIsLoading(true);
+        const imageData = await fetchImages(query, page);
 
-        const imagesHits = imageData.hits;
+        setTotalHits(imageData.totalHits);
 
-        if (imagesHits.length === 0) {
-          toast.warning('No results were found, please try something else.');
+        if (imageData.hits.length === 0) {
+          toast.warning(
+            'No results were found for your search, please try something else.'
+          );
           return;
         }
 
-        this.setState(({ articles }) => ({
-          articles: [...articles, ...imagesHits],
-          totalHits: imageData.totalHits,
-        }));
+        setArticles(state => [...state, ...imageData.hits]);
       } catch (error) {
-        this.setState({
-          error: new Error(`Sorry something went wrong. ${error.message}`),
-        });
+        setError(new Error(`Sorry something went wrong. ${error.message}`));
 
         toast.error(`Sorry something went wrong. ${error.message}`);
       } finally {
-        this.setState({ isLoading: false });
+        setIsLoading(false);
       }
     }
-  }
 
-  handleFormSubmit = text => {
-    this.setState({ query: text.trim(), page: 1, articles: [] });
+    fetchGalleryImages();
+  }, [query, page]);
+
+  const handleFormSubmit = text => {
+    setPage(1);
+    setQuery(text.trim());
+    setArticles([]);
   };
 
-  handleLoadMore = e => {
-    this.setState(prevState => ({ page: prevState.page + 1 }));
+  const handleLoadMore = () => {
+    setPage(prevState => prevState + 1);
   };
 
-  toggleModal = () => {
-    this.setState(({ showModal }) => ({
-      showModal: !showModal,
-    }));
-  };
-
-  handleImageClick = index => {
-    this.toggleModal();
-    this.setState({
-      largeImageURL: this.state.articles[index].largeImageURL,
-      tags: this.state.articles[index].tags,
-    });
-  };
-
-  render() {
-    const { showModal, articles, error, isLoading } = this.state;
-    const imagesCount = articles.length;
-
-    return (
+  return (
+    <>
       <>
-        <>
-          <SearchBar onSearchFormSubmit={this.handleFormSubmit} />
+        <SearchBar onSearchFormSubmit={handleFormSubmit} />
 
-          {isLoading && <Loader />}
-          {error && (
-            <h1 style={{ color: 'grey', textAlign: 'center' }}>
-              {error.message}
-            </h1>
-          )}
+        {isLoading && <Loader />}
+        {error && <Title>{error.message}</Title>}
 
-          {imagesCount > 0 && (
-            <ImageGallery
-              articles={articles}
-              onImageClick={this.handleImageClick}
-            />
-          )}
+        {articles.length > 0 && <ImageGallery articles={articles} />}
 
-          {imagesCount > 0 && imagesCount !== this.state.totalHits && (
-            <Button onLoadMore={this.handleLoadMore} />
-          )}
+        {articles.length > 0 && totalHits !== articles.length && (
+          <Button onLoadMore={handleLoadMore} />
+        )}
 
-          {imagesCount > 0 && imagesCount === this.state.totalHits && (
-            <Notification />
-          )}
-        </>
-
-        <div>
-          {showModal && (
-            <Modal onClose={this.toggleModal}>
-              {<img src={this.state.largeImageURL} alt={this.state.tags} />}
-            </Modal>
-          )}
-          <ToastContainer
-            autoClose={3000}
-            position="top-center"
-            theme="light"
-            pauseOnHover
-          />
-        </div>
+        {articles.length > 0 && totalHits === articles.length && (
+          <Notification />
+        )}
       </>
-    );
-  }
-}
+
+      <ToastContainer
+        autoClose={3000}
+        position="top-center"
+        theme="light"
+        pauseOnHover
+      />
+    </>
+  );
+};
+
